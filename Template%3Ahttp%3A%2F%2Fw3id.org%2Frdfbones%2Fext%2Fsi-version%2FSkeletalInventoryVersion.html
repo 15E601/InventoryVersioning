@@ -1,0 +1,105 @@
+<semantic-link iri="[[singleValueFromSelect
+"PREFIX obo: <http://purl.obolibrary.org/obo/>
+SELECT ?object
+  WHERE {?? obo:IAO_0000136 ?object.}"]]" urlqueryparam-tab="[[singleValueFromSelect "
+SELECT ?param
+  WHERE {?? <http://purl.obolibrary.org/obo/IAO_0000136> ?roi.
+  ?roi <http://w3id.org/rdfbones/anthrograph/app/phaleron-app/urlparam>  ?param }"]]" >
+<span class='fa fa-arrow-right' style='pointer-events: none;'></span>&nbsp; <strong>
+Back to Skeletal Inventory</strong>
+</semantic-link>
+<br><br>
+
+<semantic-form
+  id='VersionDate'
+  subject='{{page-resource}}'
+  post-action='event'
+  browser-persistence=true
+  form-id='VersionDate'
+  persistence='sparql'
+  fields='[
+      {
+  "id": "versiondate",
+    "label": "Select a Date for this Version",
+    "xsdDatatype": "xsd:date",
+    "maxOccurs": 1,
+    "minOccurs": 1,
+       "selectPattern":"
+       PREFIX dc: <http://purl.org/dc/terms/>
+       PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+       PREFIX obo: <http://purl.obolibrary.org/obo/>
+       SELECT $value  WHERE {
+              $subject dc:date $value .
+              }",
+          "insertPattern": "
+            PREFIX dc: <http://purl.org/dc/terms/>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            PREFIX obo: <http://purl.obolibrary.org/obo/>
+            INSERT {GRAPH ?mygraph {
+             $subject dc:date $value . }}
+            WHERE {
+            GRAPH ?mygraph {?subject a ?o }
+               }",
+           "deletePattern": "
+              PREFIX dc: <http://purl.org/dc/terms/>
+              PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+              PREFIX obo: <http://purl.obolibrary.org/obo/>
+                DELETE {$subject dc:date $value . }
+                WHERE { }"
+,
+"constraints": [{
+                 "validatePattern":"
+                         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                         PREFIX obo: <http://purl.obolibrary.org/obo/>
+                         PREFIX dc: <http://purl.org/dc/terms/>
+                         ASK WHERE { FILTER NOT EXISTS {
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 ?inventory .
+								$subject obo:IAO_0000136 ?inventory .
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							?FirstVersion dc:date ?Date .
+  							FILTER ($value < ?Date)
+  							FILTER ($subject != ?FirstVersion)
+  											    }}",
+                  "message": "Date of successive versions must be at a later date than the initial version. Please alter the initial version instead."
+                  }
+			,
+				{
+                 "validatePattern":"
+                         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                         PREFIX obo: <http://purl.obolibrary.org/obo/>
+                         PREFIX dc: <http://purl.org/dc/terms/>
+                         ASK WHERE { FILTER NOT EXISTS {
+   									        $subject obo:IAO_0000136 ?inventory .
+   									        ?Version obo:IAO_0000136 ?inventory .
+   									        ?Version a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+   									        ?Version dc:date $value .
+   									        FILTER (?Version != $subject)
+  											    }}",
+                  "message": "This TEST INV instance already has a version with this exact date"
+                  }]
+}]'
+>
+<semantic-form-recover-notification></semantic-form-recover-notification>
+  <div data-flex-layout="row md-column top-spread">
+    <div class="grid-demo">
+      <h6>Date</h6>
+
+
+ <semantic-form-datetime-input for="versiondate" mode="date" ></semantic-form-datetime-input>
+
+     </div>
+       <div class="grid-demo">
+      <button name="submit" class="btn btn-primary"><strong>Save Date</strong></button>
+      <button name="reset" class="btn btn-secondary">Reset</button>
+      [[>:RDFBONES_FormSuccessFeedbackTemplateSnippet ufb-id="show-after-versiondate-update" ufbTemplate="versiondate-Template" ufbname="humerus"]]
+     </div>
+  </div>
+  </semantic-form>
+ [[>:RDFBONES_FormSuccessFeedbackEventSnippet event-source="versiondate" event-target="show-after-versiondate-update"]]

@@ -1,0 +1,1223 @@
+<div class="page" style="margin-left:30px; margin-right: 30px">
+
+<h4><img src="../assets/images/skull.png" alt="Skull" height="40">&nbsp;
+<a href="RDFBONES_SkeletalInventories"><span class='fa fa-arrow-right' style='pointer-events: none;'></span>&nbsp; <strong> Browse All Skeletal Inventories</strong></a>
+</h4>
+<br>
+[[#if (ask 'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ASK {SELECT  ?mySI  WHERE {        ?? a ?mySI . }}') ]]
+ <!--> <h4>Inventory ID: <strong>[[this.label]]</strong> </h4> -->
+
+<br><div class="text-right">
+<semantic-update query='
+PREFIX : <http://www.metaphacts.com/resource/>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX rdfbones: <http://w3id.org/rdfbones/core#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX fma: <http://purl.org/sig/ont/fma/>
+DELETE { GRAPH ?mygraph {?s ?p ?o }} WHERE {
+          SELECT ?mygraph ?s ?p ?o WHERE {
+            GRAPH ?mygraph {
+            ?? a ?mytype .
+            ?s ?p ?o .
+          }
+        }
+      }
+'
+id="DeleteSkeleton"
+variable-params='["mygraph","s","o","p","mytype"]'
+post-action="[[resolvePrefix ":RDFBONES_SkeletalInventories"]]"
+show-confirmation="true"
+confirmation-options='{
+     "message": "Do you really want to delete this Skeletal Inventory and all associated data?",
+     "confirmLabel": "Delete"
+   }'
+>
+
+
+
+    <button class='btn btn-primary btn-danger'><span class='fa fa-trash' style='pointer-events: none;'></span>&nbsp; <strong>DELETE Entire Skeletal Inventory</strong></button>
+
+
+</semantic-update> </div>
+[[else]]
+Skeletal Inventory [[this.label]] has been successfully deleted.
+[[/if]]
+<hr>
+[[>:RDFBONES_ExportSnippet]]
+</div>
+
+
+<h2><strong>Manage TEST-INVENTORY Versions</strong></h2>
+
+<!-- Manage Versions Form -->
+
+      <semantic-form
+for-class="http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion"
+new-subject-template="http://pbp-skeletalinventoryversioning.org/records/si-version-{{UUID}}"
+post-action='redirect'
+persistence='sparql'
+
+fields='[{
+    "id": "ofType",
+    "label": "Unique label for new TEST-INVENTORY Version instance",
+    "xsdDatatype": "xsd:string",
+    "maxOccurs": 1,
+    "minOccurs": 1,
+    "insertPattern": "
+      PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX obo: <http://purl.obolibrary.org/obo/>
+      PREFIX vivo: <http://vivoweb.org/ontology/core#>
+      PREFIX phaleron-patho:<http://w3id.org/rdfbones/ext/phaleron-patho/>
+      PREFIX cidoc:<http://www.cidoc-crm.org/cidoc-crm/>
+
+      INSERT {GRAPH ?mygraph {
+        $subject rdfs:label $value .
+        $subject obo:IAO_0000136 ?? .
+        $subject a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+
+       }} WHERE {
+         GRAPH ?mygraph {?? a ?o } .
+
+}"
+,
+"deletePattern": "
+    PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX obo: <http://purl.obolibrary.org/obo/>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    DELETE {$subject obo:IAO_0000136 ?? .} WHERE {$subject obo:IAO_0000136 ?? .} "
+,
+"constraints": [{
+                 "validatePattern":"
+       PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+       PREFIX obo: <http://purl.obolibrary.org/obo/>
+       PREFIX phaleron-patho:<http://w3id.org/rdfbones/ext/phaleron-patho/>
+       ASK WHERE { FILTER NOT EXISTS {
+   									         	?s rdfs:label $value .
+            ?s a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+            ?s obo:IAO_0000136 ?? .
+  											    }}",
+"message": "This TEST INV instance already has an identically named version"
+}]
+}]'>
+ <semantic-form-recover-notification></semantic-form-recover-notification>
+<semantic-form-text-input for='ofType'></semantic-form-text-input><button name="submit" class="btn btn-primary"><strong>Create New Version</strong></button>&nbsp;
+    <button name="reset" class="btn btn-secondary">Reset</button>
+</semantic-form>
+<br>
+
+<strong>Existing Versions:</strong></hr>
+<semantic-table
+  query="
+      PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX obo: <http://purl.obolibrary.org/obo/>
+      SELECT ?version WHERE {
+             ?version a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+             ?version obo:IAO_0000136 ?? .
+
+      }"
+  column-configuration='[
+    {"variableName": "version", "displayName": "Version_Test"}
+    ]'
+  options='{"showFilter":false}'
+></semantic-table>
+
+<hr>
+
+<h2><strong>Save active version flag</strong></h2>
+
+<semantic-form
+  id='VersionFlag'
+  subject='{{page-resource}}'
+  post-action='event'
+  browser-persistence=true
+  form-id='VersionFlag'
+  persistence='sparql'
+  fields='[
+      {
+             "id": "versionflag",
+             "label": "versionflag",
+             "xsdDatatype": "xsd:anyURI",
+             "minOccurs": "1",
+             "maxOccurs": "1",
+             "selectPattern": "
+ PREFIX obo: <http://purl.obolibrary.org/obo/>
+ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+ PREFIX dc: <http://purl.org/dc/terms/>
+ SELECT $value WHERE {
+?? <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> $value
+}
+ ",
+"valueSetPattern": "
+ PREFIX obo: <http://purl.obolibrary.org/obo/>
+ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+ PREFIX standards-si: <http://w3id.org/rdfbones/ext/standards-si/>
+ PREFIX owl: <http://www.w3.org/2002/07/owl#>
+ SELECT DISTINCT $value WHERE {
+        $value a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+        $value obo:IAO_0000136 ?? .
+}
+ ",
+ "insertPattern": "
+   PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+   PREFIX obo: <http://purl.obolibrary.org/obo/>
+   PREFIX dc: <http://purl.org/dc/terms/>
+   INSERT {GRAPH ?mygraph {
+?? <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> $value }}
+     WHERE {
+         GRAPH ?mygraph {$subject a ?o . }
+}"
+,
+       "deletePattern": "
+          PREFIX dc: <http://purl.org/dc/terms/>
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX obo: <http://purl.obolibrary.org/obo/>
+          DELETE { ?? <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> $value .}
+          WHERE {
+}"
+}]'
+>
+<semantic-form-recover-notification></semantic-form-recover-notification>
+  <div data-flex-layout="row md-column top-spread">
+    <div class="grid-demo">
+      <h6>Active version</h6>
+
+ <semantic-form-select-input for='versionflag'></semantic-form-select-input>
+
+     </div>
+       <div class="grid-demo">
+      <button name="submit" class="btn btn-primary"><strong>Save active version</strong></button>
+      <button name="reset" class="btn btn-secondary">Reset</button>
+      [[>:RDFBONES_FormSuccessFeedbackTemplateSnippet ufb-id="show-after-versionflag-update" ufbTemplate="versionflag-Template" ufbname="versionflag"]]
+     </div>
+  </div>
+  </semantic-form>
+ [[>:RDFBONES_FormSuccessFeedbackEventSnippet event-source="versionflag" event-target="show-after-versionflag-update"]]
+
+
+<hr>
+
+   <!-- Humerus Bone Form -->
+ <semantic-form
+   id = 'Humerus'
+   subject='{{page-resource}}'
+   post-action='event'
+   browser-persistence=true
+   form-id='Humerus'
+   persistence='sparql'
+   fields='[
+       {
+   "id": "humeruscomp",
+   "label": "Completeness",
+   "xsdDatatype": "xsd:anyURI",
+   "minOccurs": "1",
+   "maxOccurs": "1",
+   "selectPattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX dc: <http://purl.org/dc/terms/>
+
+     SELECT DISTINCT $value
+       WHERE {
+           {
+           $subject obo:BFO_0000051 ?mysection.
+           ?mysection obo:BFO_0000051 ?MD .
+   		   ?MD a <http://w3id.org/rdfbones/ext/standards-si/Representation4States> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?OriginalVS .
+           ?OriginalVS obo:OBI_0000999 $value .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion = ?FirstVersion )
+  							FILTER NOT EXISTS { ?Version obo:BFO_0000051 ?OriginalVS }
+							}
+           UNION
+           {
+           $subject obo:BFO_0000051 ?mysection .
+           ?mysection obo:BFO_0000051 ?MD .
+     	   ?MD a <http://w3id.org/rdfbones/ext/standards-si/Representation4States> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?PartonomyVS .
+           ?PartonomyVS obo:OBI_0000999 $value .
+           ?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject .
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion != ?FirstVersion )
+           }
+           UNION
+           {
+           	$subject obo:BFO_0000051 ?mysection .
+           	?mysection obo:BFO_0000051 ?MD .
+     		?MD a <http://w3id.org/rdfbones/ext/standards-si/Representation4States> .
+           	?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           	?MD obo:IAO_0000136 ?ROI ;
+           		obo:OBI_0001938 ?PreviousVS .
+           	?PreviousVS obo:OBI_0000999 $value .
+           	
+           	FILTER NOT EXISTS { ?ActiveVersion obo:BFO_0000051 ?ActiveVS .
+  			FILTER EXISTS { ?ActiveVS a <http://w3id.org/rdfbones/ext/standards-si/Representation4StatesValueSpecification> .
+  							?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> . 
+  							?MD obo:IAO_0000136 ?ROI ;
+           						obo:OBI_0001938 ?ActiveVS . } }
+  			
+           	?PreviousVersion obo:BFO_0000051 ?PreviousVS .
+  			?PreviousVersion dc:date ?Date .
+           	?ActiveVersion dc:date ?ActiveDate .
+           	$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+              { SELECT ?PreviousVersion
+    									WHERE {
+								?PreviousVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?PreviousVersion obo:IAO_0000136 $subject .
+								?PreviousVersion dc:date ?Date .
+     							?ActiveVersion dc:date ?ActiveDate .
+  								?ActiveVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  								$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+								FILTER ( ?ActiveDate > ?Date )
+								FILTER EXISTS {
+								?MD a <http://w3id.org/rdfbones/ext/standards-si/Representation4States> .
+        						?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+								?PreviousVersion obo:BFO_0000051 ?PreviousVS .
+								?MD obo:IAO_0000136 ?ROI ;
+           							obo:OBI_0001938 ?PreviousVS .
+								}
+								}
+    							    	ORDER BY DESC (?Date)
+										LIMIT 1
+  								}
+  								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?FirstDate .
+								}
+    							    ORDER BY ?FirstDate
+    								LIMIT 1
+  								}
+  						FILTER ( ?ActiveVersion != ?FirstVersion )
+           }
+           	UNION
+           {
+           	$subject obo:BFO_0000051 ?mysection .
+           	?mysection obo:BFO_0000051 ?MD .
+     		?MD a <http://w3id.org/rdfbones/ext/standards-si/Representation4States> .
+           	?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           	?MD obo:IAO_0000136 ?ROI ;
+           		obo:OBI_0001938 ?FirstVS .
+           	?FirstVS obo:OBI_0000999 $value .
+           	FILTER NOT EXISTS { 
+            ?AnyVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  			?AnyVersion obo:IAO_0000136 $subject .
+    		?AnyVersion obo:BFO_0000051 ?AnyVS .
+           	?MD obo:OBI_0001938 ?AnyVS . }
+           }
+           	UNION
+           {
+           	$subject obo:BFO_0000051 ?mysection .
+           	?mysection obo:BFO_0000051 ?MD .
+     		?MD a <http://w3id.org/rdfbones/ext/standards-si/Representation4States> .
+           	?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           	?MD obo:IAO_0000136 ?ROI ;
+           		obo:OBI_0001938 ?FirstVS .
+           	?FirstVS obo:OBI_0000999 $value .
+           	$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+  				FILTER NOT EXISTS {
+  					?PreviousVersion dc:date ?Date .
+           			?ActiveVersion dc:date ?ActiveDate .
+              			{ SELECT ?PreviousVersion
+    									WHERE {
+								?PreviousVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?PreviousVersion obo:IAO_0000136 $subject .
+								?PreviousVersion dc:date ?Date .
+     							?ActiveVersion dc:date ?ActiveDate .
+  								?ActiveVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  								$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+								FILTER ( ?ActiveDate > ?Date )
+								FILTER EXISTS {
+								?PreviousVersion obo:BFO_0000051 ?PreviousVS .
+								?MD obo:IAO_0000136 ?ROI ;
+           							obo:OBI_0001938 ?PreviousVS .
+								}
+								}
+    							    	ORDER BY DESC (?Date)
+										LIMIT 1
+  								}
+           						}
+           	  								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?FirstDate .
+								}
+    							    ORDER BY ?FirstDate
+    								LIMIT 1
+  								}
+           	FILTER NOT EXISTS {
+            ?AnyVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  			?AnyVersion obo:IAO_0000136 $subject .
+    		?AnyVersion obo:BFO_0000051 ?FirstVS .
+           	?MD obo:OBI_0001938 ?FirstVS . }
+           	FILTER NOT EXISTS { ?ActiveVersion obo:BFO_0000051 ?ActiveVS .
+           	?MD obo:OBI_0001938 ?ActiveVS . }
+           }
+     }",
+   "valueSetPattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX standards-si: <http://w3id.org/rdfbones/ext/standards-si/>
+     PREFIX owl: <http://www.w3.org/2002/07/owl#>
+     SELECT DISTINCT $value WHERE {
+       <http://w3id.org/rdfbones/ext/standards-si/Representation4States> rdfs:subClassOf ?myRS3.
+       ?myRS3 a owl:Restriction ;
+             owl:onProperty <http://purl.obolibrary.org/obo/OBI_0001938> ;
+             owl:allValuesFrom  ?r4svs.
+       ?r4svs rdfs:subClassOf ?myRS4 .
+     OPTIONAL {
+   	  ?myRS4 a owl:Restriction ;
+             owl:onProperty obo:OBI_0000999 ;
+             owl:allValuesFrom  ?l4.
+             $value a ?l4.
+   	  optional {?index obo:IAO_0000136 $value .}
+   	  }
+   	            OPTIONAL {
+   	 ?myRS4 a owl:Restriction ;
+            owl:onProperty ?connect;
+            owl:onClass|owl:someValuesFrom   ?l4.
+	           ?l4 	 owl:oneOf/rdf:rest*/rdf:first $value .
+   	 optional {?index obo:IAO_0000136 $value .}
+   	}
+
+     } ORDER BY ?index ",
+     
+   "insertPattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX dc: <http://purl.org/dc/terms/>
+     INSERT {GRAPH ?mygraph { ?MD obo:OBI_0001938 ?PartonomyVS .
+            ?PartonomyVS obo:OBI_0000999 $value .
+            ?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+            ?PartonomyVS a <http://w3id.org/rdfbones/ext/standards-si/Representation4StatesValueSpecification> .
+            ?MD obo:OBI_0001938 ?OriginalVS .
+            ?OriginalVS obo:OBI_0000999 $value .
+            ?OriginalVS a <http://w3id.org/rdfbones/ext/standards-si/Representation4StatesValueSpecification> . }}
+       WHERE {
+           {
+           GRAPH ?mygraph {?subject a ?o }
+           $subject obo:BFO_0000051 ?mysection.
+           ?mysection obo:BFO_0000051 ?MD .
+     					     ?MD a <http://w3id.org/rdfbones/ext/standards-si/Representation4States> .
+     					     ?MD a ?MDType1 .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+           OPTIONAL {
+						?Version a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+    					?Version obo:IAO_0000136 $subject . }
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion = ?FirstVersion )
+  							OPTIONAL {
+    						FILTER ( ?ActiveVersion != ?Version ) }
+  							FILTER NOT EXISTS { ?Version obo:BFO_0000051 ?OriginalVS }
+  							BIND(URI(CONCAT(STR($subject),\"-\",STR(?ActiveVersion),\"-\",STR(?MDType1),\"-\",STR(?ROI))) AS ?OriginalVS ) 
+							}
+           UNION
+           {
+           GRAPH ?mygraph {?subject a ?o }
+           $subject obo:BFO_0000051 ?mysection .
+           ?mysection obo:BFO_0000051 ?MD .
+     					     ?MD a <http://w3id.org/rdfbones/ext/standards-si/Representation4States> .
+     					     ?MD a ?MDType2 .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject .
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion != ?FirstVersion )
+  							BIND(URI(CONCAT(STR($subject),\"-\",STR(?ActiveVersion),\"-\",STR(?MDType2),\"-\",STR(?ROI))) AS ?PartonomyVS ) 
+           }
+         }
+        ",
+     "deletePattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX dc: <http://purl.org/dc/terms/>
+     DELETE {
+      ?MD obo:OBI_0001938 ?PartonomyVS .
+     	?PartonomyVS obo:OBI_0000999 $value .
+     	?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+     	?MD obo:OBI_0001938 ?OriginalVS .
+     	?OriginalVS obo:OBI_0000999 $value . }
+       WHERE {
+           {
+           $subject obo:BFO_0000051 ?mysection.
+           ?mysection obo:BFO_0000051 ?MD .
+     					     ?MD a <http://w3id.org/rdfbones/ext/standards-si/Representation4States> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?OriginalVS .
+           ?OriginalVS obo:OBI_0000999 $value .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+           
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion = ?FirstVersion )
+  							FILTER NOT EXISTS { ?Version obo:BFO_0000051 ?OriginalVS }
+							}
+           UNION
+           {
+           $subject obo:BFO_0000051 ?mysection .
+           ?mysection obo:BFO_0000051 ?MD .
+     					     ?MD a <http://w3id.org/rdfbones/ext/standards-si/Representation4States> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?PartonomyVS .
+           ?PartonomyVS obo:OBI_0000999 $value .
+           ?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject .
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion != ?FirstVersion )
+           }
+           } "
+           }
+           ,
+           {
+   "id": "humerusobs",
+   "label": "Observability",
+   "xsdDatatype": "xsd:anyURI",
+   "minOccurs": "1",
+   "maxOccurs": "1",
+   "selectPattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX dc: <http://purl.org/dc/terms/>
+
+     SELECT DISTINCT $value
+       WHERE {
+           {
+           $subject obo:BFO_0000051 ?mysection.
+           ?mysection obo:BFO_0000051 ?MD .
+   		   ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/Observability> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?OriginalVS .
+           ?OriginalVS obo:OBI_0000999 $value .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion = ?FirstVersion )
+  							FILTER NOT EXISTS { ?Version obo:BFO_0000051 ?OriginalVS }
+							}
+           UNION
+           {
+           $subject obo:BFO_0000051 ?mysection .
+           ?mysection obo:BFO_0000051 ?MD .
+     	   ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/Observability> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?PartonomyVS .
+           ?PartonomyVS obo:OBI_0000999 $value .
+           ?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject .
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion != ?FirstVersion )
+           }
+           UNION 
+           {
+           	$subject obo:BFO_0000051 ?mysection .
+           	?mysection obo:BFO_0000051 ?MD .
+     		?MD a <http://w3id.org/rdfbones/ext/phaleron-si/Observability> .
+           	?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           	?MD obo:IAO_0000136 ?ROI ;
+           		obo:OBI_0001938 ?PreviousVS .
+           	?PreviousVS obo:OBI_0000999 $value .
+           	
+           	FILTER NOT EXISTS { ?ActiveVersion obo:BFO_0000051 ?ActiveVS .
+  			FILTER EXISTS { ?ActiveVS a <http://w3id.org/rdfbones/ext/phaleron-si/ObservabilityValueSpecification> .
+  							?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> . 
+  							?MD obo:IAO_0000136 ?ROI ;
+           						obo:OBI_0001938 ?ActiveVS . } }
+  			
+           	?PreviousVersion obo:BFO_0000051 ?PreviousVS .
+  			?PreviousVersion dc:date ?Date .
+           	?ActiveVersion dc:date ?ActiveDate .
+           	$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+              { SELECT ?PreviousVersion
+    									WHERE {
+								?PreviousVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?PreviousVersion obo:IAO_0000136 $subject .
+								?PreviousVersion dc:date ?Date .
+     							?ActiveVersion dc:date ?ActiveDate .
+  								?ActiveVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  								$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+								FILTER ( ?ActiveDate > ?Date )
+								FILTER EXISTS {
+								?MD a <http://w3id.org/rdfbones/ext/phaleron-si/Observability> .
+        						?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+								?PreviousVersion obo:BFO_0000051 ?PreviousVS .
+								?MD obo:IAO_0000136 ?ROI ;
+           							obo:OBI_0001938 ?PreviousVS .
+								}
+								}
+    							    	ORDER BY DESC (?Date)
+										LIMIT 1
+  								}
+  								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?FirstDate .
+								}
+    							    ORDER BY ?FirstDate
+    								LIMIT 1
+  								}
+  						FILTER ( ?ActiveVersion != ?FirstVersion )
+           }
+           	UNION 
+           {
+           	$subject obo:BFO_0000051 ?mysection .
+           	?mysection obo:BFO_0000051 ?MD .
+     		?MD a <http://w3id.org/rdfbones/ext/phaleron-si/Observability> .
+           	?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           	?MD obo:IAO_0000136 ?ROI ;
+           		obo:OBI_0001938 ?FirstVS .
+           	?FirstVS obo:OBI_0000999 $value .
+           	FILTER NOT EXISTS { 
+            ?AnyVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  			?AnyVersion obo:IAO_0000136 $subject .
+    		?AnyVersion obo:BFO_0000051 ?AnyVS .
+           	?MD obo:OBI_0001938 ?AnyVS . }
+           }
+           	UNION 
+           {
+           	$subject obo:BFO_0000051 ?mysection .
+           	?mysection obo:BFO_0000051 ?MD .
+     		?MD a <http://w3id.org/rdfbones/ext/phaleron-si/Observability> .
+           	?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           	?MD obo:IAO_0000136 ?ROI ;
+           		obo:OBI_0001938 ?FirstVS .
+           	?FirstVS obo:OBI_0000999 $value .
+           	$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+  				FILTER NOT EXISTS {
+  					?PreviousVersion dc:date ?Date .
+           			?ActiveVersion dc:date ?ActiveDate .
+              			{ SELECT ?PreviousVersion
+    									WHERE {
+								?PreviousVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?PreviousVersion obo:IAO_0000136 $subject .
+								?PreviousVersion dc:date ?Date .
+     							?ActiveVersion dc:date ?ActiveDate .
+  								?ActiveVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  								$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+								FILTER ( ?ActiveDate > ?Date )
+								FILTER EXISTS {
+								?PreviousVersion obo:BFO_0000051 ?PreviousVS .
+								?MD obo:IAO_0000136 ?ROI ;
+           							obo:OBI_0001938 ?PreviousVS .
+								}
+								}
+    							    	ORDER BY DESC (?Date)
+										LIMIT 1
+  								}
+           						}
+           	  								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?FirstDate .
+								}
+    							    ORDER BY ?FirstDate
+    								LIMIT 1
+  								}
+           	FILTER NOT EXISTS {
+            ?AnyVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  			?AnyVersion obo:IAO_0000136 $subject .
+    		?AnyVersion obo:BFO_0000051 ?FirstVS .
+           	?MD obo:OBI_0001938 ?FirstVS . }
+           	FILTER NOT EXISTS { ?ActiveVersion obo:BFO_0000051 ?ActiveVS .
+           	?MD obo:OBI_0001938 ?ActiveVS . }
+           }
+     }",
+   "valueSetPattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX standards-si: <http://w3id.org/rdfbones/ext/standards-si/>
+     PREFIX owl: <http://www.w3.org/2002/07/owl#>
+     SELECT DISTINCT $value WHERE {
+       <http://w3id.org/rdfbones/ext/phaleron-si/Observability> rdfs:subClassOf ?myRS3.
+       ?myRS3 a owl:Restriction ;
+             owl:onProperty <http://purl.obolibrary.org/obo/OBI_0001938> ;
+             owl:allValuesFrom  ?r4svs.
+       ?r4svs rdfs:subClassOf ?myRS4 .
+     OPTIONAL {
+   	  ?myRS4 a owl:Restriction ;
+             owl:onProperty obo:OBI_0000999 ;
+             owl:allValuesFrom  ?l4.
+             $value a ?l4.
+   	  optional {?index obo:IAO_0000136 $value .}
+   	  }
+   	            OPTIONAL {
+   	 ?myRS4 a owl:Restriction ;
+            owl:onProperty ?connect;
+            owl:onClass|owl:someValuesFrom   ?l4.
+	           ?l4 	 owl:oneOf/rdf:rest*/rdf:first $value .
+   	 optional {?index obo:IAO_0000136 $value .}
+   	}
+
+     } ORDER BY ?index ",
+     
+   "insertPattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX dc: <http://purl.org/dc/terms/>
+     INSERT {GRAPH ?mygraph { ?MD obo:OBI_0001938 ?PartonomyVS .
+            ?PartonomyVS obo:OBI_0000999 $value .
+            ?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+            ?PartonomyVS a <http://w3id.org/rdfbones/ext/phaleron-si/ObservabilityValueSpecification> .
+            ?MD obo:OBI_0001938 ?OriginalVS .
+            ?OriginalVS obo:OBI_0000999 $value .
+            ?OriginalVS a <http://w3id.org/rdfbones/ext/phaleron-si/ObservabilityValueSpecification> . }}
+       WHERE {
+           {
+           GRAPH ?mygraph {?subject a ?o }
+           $subject obo:BFO_0000051 ?mysection.
+           ?mysection obo:BFO_0000051 ?MD .
+     					     ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/Observability> .
+     					     ?MD a ?MDType1 .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+           OPTIONAL {
+						?Version a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+    					?Version obo:IAO_0000136 $subject . }
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion = ?FirstVersion )
+  							OPTIONAL {
+    						FILTER ( ?ActiveVersion != ?Version ) }
+  							FILTER NOT EXISTS { ?Version obo:BFO_0000051 ?OriginalVS }
+  							BIND(URI(CONCAT(STR($subject),\"-\",STR(?ActiveVersion),\"-\",STR(?MDType1),\"-\",STR(?ROI))) AS ?OriginalVS ) 
+							}
+           UNION
+           {
+           GRAPH ?mygraph {?subject a ?o }
+           $subject obo:BFO_0000051 ?mysection .
+           ?mysection obo:BFO_0000051 ?MD .
+     					     ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/Observability> .
+     					     ?MD a ?MDType2 .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject .
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion != ?FirstVersion )
+  							BIND(URI(CONCAT(STR($subject),\"-\",STR(?ActiveVersion),\"-\",STR(?MDType2),\"-\",STR(?ROI))) AS ?PartonomyVS ) 
+           }
+         }
+        ",
+     "deletePattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX dc: <http://purl.org/dc/terms/>
+     DELETE {
+      ?MD obo:OBI_0001938 ?PartonomyVS .
+     	?PartonomyVS obo:OBI_0000999 $value .
+     	?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+     	?MD obo:OBI_0001938 ?OriginalVS .
+     	?OriginalVS obo:OBI_0000999 $value . }
+       WHERE {
+           {
+           $subject obo:BFO_0000051 ?mysection.
+           ?mysection obo:BFO_0000051 ?MD .
+     					     ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/Observability> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?OriginalVS .
+           ?OriginalVS obo:OBI_0000999 $value .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+           
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion = ?FirstVersion )
+  							FILTER NOT EXISTS { ?Version obo:BFO_0000051 ?OriginalVS }
+							}
+           UNION
+           {
+           $subject obo:BFO_0000051 ?mysection .
+           ?mysection obo:BFO_0000051 ?MD .
+     					     ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/Observability> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?PartonomyVS .
+           ?PartonomyVS obo:OBI_0000999 $value .
+           ?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject .
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion != ?FirstVersion )
+           }
+           }"
+} ]'
+ >
+               <h2><strong>Humerus</strong></h2>
+            <semantic-form-recover-notification></semantic-form-recover-notification>
+                    <div data-flex-layout="row md-column top-spread">
+                  <div class="grid-demo">
+    <semantic-form-select-input for='humeruscomp'></semantic-form-select-input> 
+    <font color='orange'><semantic-form-checklist-input for='humerusobs' type='radio' row='true'></semantic-form-checklist-input></font>
+			</div>
+               </div>
+                <div class="grid-demo">
+                      <button name="submit" class="btn btn-primary"><strong>Save Humerus</strong></button>
+                      <button name="reset" class="btn btn-secondary">Reset</button>
+                      <!-- Placement of feedback on form update -->
+                      [[>:RDFBONES_FormSuccessFeedbackTemplateSnippet ufb-id="show-after-Humerus-update" ufbTemplate="Humerus-Template" ufbname="Humerus"]]
+                  </div>
+                </div>
+            </semantic-form>
+            <!-- user feedback on form update -->
+            [[>:RDFBONES_FormSuccessFeedbackEventSnippet event-source="Humerus" event-target="show-after-Humerus-update"]]
+   
+
+
+<hr>
+
+<!-- skull taphonomy Form -->
+
+<semantic-form
+  id='HumerusTaph'
+  subject='{{page-resource}}'
+  post-action='event'
+  browser-persistence=true
+  form-id='HumerusTaph'
+  persistence='sparql'
+   fields='[
+       {
+   "id": "humerustaph",
+   "label": "Taphonomy",
+   "xsdDatatype": "xsd:anyURI",
+   "minOccurs": "0",
+   "maxOccurs": "12",
+   "selectPattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX dc: <http://purl.org/dc/terms/>
+
+     SELECT DISTINCT $value
+       WHERE {
+           {
+           $subject obo:BFO_0000051 ?mysection.
+           ?mysection obo:BFO_0000051 ?MD .
+   		   ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessment> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?OriginalVS .
+           ?OriginalVS obo:OBI_0000999 $value .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion = ?FirstVersion )
+  							FILTER NOT EXISTS { ?Version obo:BFO_0000051 ?OriginalVS }
+							}
+           UNION
+           {
+           $subject obo:BFO_0000051 ?mysection .
+           ?mysection obo:BFO_0000051 ?MD .
+     	   ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessment> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?PartonomyVS .
+           ?PartonomyVS obo:OBI_0000999 $value .
+           ?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject .
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion != ?FirstVersion )
+           }
+           UNION 
+           {
+           	$subject obo:BFO_0000051 ?mysection .
+           	?mysection obo:BFO_0000051 ?MD .
+     		?MD a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessment> .
+           	?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           	?MD obo:IAO_0000136 ?ROI ;
+           		obo:OBI_0001938 ?PreviousVS .
+           	?PreviousVS obo:OBI_0000999 $value .
+           	
+           	FILTER NOT EXISTS { ?ActiveVersion obo:BFO_0000051 ?ActiveVS .
+  			FILTER EXISTS { ?ActiveVS a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessmentValueSpecification> .
+  							?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> . 
+  							?MD obo:IAO_0000136 ?ROI ;
+           						obo:OBI_0001938 ?ActiveVS . } }
+  			
+           	?PreviousVersion obo:BFO_0000051 ?PreviousVS .
+  			?PreviousVersion dc:date ?Date .
+           	?ActiveVersion dc:date ?ActiveDate .
+           	$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+              { SELECT ?PreviousVersion
+    									WHERE {
+								?PreviousVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?PreviousVersion obo:IAO_0000136 $subject .
+								?PreviousVersion dc:date ?Date .
+     							?ActiveVersion dc:date ?ActiveDate .
+  								?ActiveVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  								$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+								FILTER ( ?ActiveDate > ?Date )
+								FILTER EXISTS {
+								?MD a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessment> .
+        						?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+								?PreviousVersion obo:BFO_0000051 ?PreviousVS .
+								?MD obo:IAO_0000136 ?ROI ;
+           							obo:OBI_0001938 ?PreviousVS .
+								}
+								}
+    							    	ORDER BY DESC (?Date)
+										LIMIT 1
+  								}
+  								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?FirstDate .
+								}
+    							    ORDER BY ?FirstDate
+    								LIMIT 1
+  								}
+  						FILTER ( ?ActiveVersion != ?FirstVersion )
+           }
+           	UNION 
+           {
+           	$subject obo:BFO_0000051 ?mysection .
+           	?mysection obo:BFO_0000051 ?MD .
+     		?MD a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessment> .
+           	?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           	?MD obo:IAO_0000136 ?ROI ;
+           		obo:OBI_0001938 ?FirstVS .
+           	?FirstVS obo:OBI_0000999 $value .
+           	FILTER NOT EXISTS { 
+            ?AnyVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  			?AnyVersion obo:IAO_0000136 $subject .
+    		?AnyVersion obo:BFO_0000051 ?AnyVS .
+           	?MD obo:OBI_0001938 ?AnyVS . }
+           }
+           	UNION 
+           {
+           	$subject obo:BFO_0000051 ?mysection .
+           	?mysection obo:BFO_0000051 ?MD .
+     		?MD a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessment> .
+           	?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           	?MD obo:IAO_0000136 ?ROI ;
+           		obo:OBI_0001938 ?FirstVS .
+           	?FirstVS obo:OBI_0000999 $value .
+           	$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+  				FILTER NOT EXISTS {
+  					?PreviousVersion dc:date ?Date .
+           			?ActiveVersion dc:date ?ActiveDate .
+              			{ SELECT ?PreviousVersion
+    									WHERE {
+								?PreviousVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?PreviousVersion obo:IAO_0000136 $subject .
+								?PreviousVersion dc:date ?Date .
+     							?ActiveVersion dc:date ?ActiveDate .
+  								?ActiveVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  								$subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+								FILTER ( ?ActiveDate > ?Date )
+								FILTER EXISTS {
+								?PreviousVersion obo:BFO_0000051 ?PreviousVS .
+								?MD obo:IAO_0000136 ?ROI ;
+           							obo:OBI_0001938 ?PreviousVS .
+								}
+								}
+    							    	ORDER BY DESC (?Date)
+										LIMIT 1
+  								}
+           						}
+           	  								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?FirstDate .
+								}
+    							    ORDER BY ?FirstDate
+    								LIMIT 1
+  								}
+           	FILTER NOT EXISTS {
+            ?AnyVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+  			?AnyVersion obo:IAO_0000136 $subject .
+    		?AnyVersion obo:BFO_0000051 ?FirstVS .
+           	?MD obo:OBI_0001938 ?FirstVS . }
+           	FILTER NOT EXISTS { ?ActiveVersion obo:BFO_0000051 ?ActiveVS .
+           	?MD obo:OBI_0001938 ?ActiveVS . }
+           }
+     }",
+   "valueSetPattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX standards-si: <http://w3id.org/rdfbones/ext/standards-si/>
+     PREFIX owl: <http://www.w3.org/2002/07/owl#>
+     SELECT DISTINCT $value WHERE {
+       <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessment> rdfs:subClassOf ?myRS3.
+       ?myRS3 a owl:Restriction ;
+             owl:onProperty <http://purl.obolibrary.org/obo/OBI_0001938> ;
+             owl:allValuesFrom  ?r4svs.
+       ?r4svs rdfs:subClassOf ?myRS4 .
+     OPTIONAL {
+   	  ?myRS4 a owl:Restriction ;
+             owl:onProperty obo:OBI_0000999 ;
+             owl:allValuesFrom  ?l4.
+             $value a ?l4.
+   	  optional {?index obo:IAO_0000136 $value .}
+   	  }
+   	            OPTIONAL {
+   	 ?myRS4 a owl:Restriction ;
+            owl:onProperty ?connect;
+            owl:onClass|owl:someValuesFrom   ?l4.
+	           ?l4 	 owl:oneOf/rdf:rest*/rdf:first $value .
+   	 optional {?index obo:IAO_0000136 $value .}
+   	}
+
+     } ORDER BY ?index ",
+     
+   "insertPattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX dc: <http://purl.org/dc/terms/>
+     INSERT {GRAPH ?mygraph { ?MD obo:OBI_0001938 ?PartonomyVS .
+            ?PartonomyVS obo:OBI_0000999 $value .
+            ?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+            ?PartonomyVS a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessmentValueSpecification> .
+            ?MD obo:OBI_0001938 ?OriginalVS .
+            ?OriginalVS obo:OBI_0000999 $value .
+            ?OriginalVS a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessmentValueSpecification> . }}
+       WHERE {
+           {
+           GRAPH ?mygraph {?subject a ?o }
+           $subject obo:BFO_0000051 ?mysection.
+           ?mysection obo:BFO_0000051 ?MD .
+     	   ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessment> .
+     	   ?MD a ?MDType1 .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+           OPTIONAL {
+						?Version a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+    					?Version obo:IAO_0000136 $subject . }
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion = ?FirstVersion )
+  							OPTIONAL {
+    						FILTER ( ?ActiveVersion != ?Version ) }
+  							FILTER NOT EXISTS { ?Version obo:BFO_0000051 ?OriginalVS }
+  							BIND(URI(CONCAT(STR($subject),\"-\",STR(?ActiveVersion),\"-\",STR(?MDType1),\"-\",STR(?ROI))) AS ?OriginalVS ) 
+							}
+           UNION
+           {
+           GRAPH ?mygraph {?subject a ?o }
+           $subject obo:BFO_0000051 ?mysection .
+           ?mysection obo:BFO_0000051 ?MD .
+     	   ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessment> .
+     	   ?MD a ?MDType2 .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject .
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion != ?FirstVersion )
+  							BIND(URI(CONCAT(STR($subject),\"-\",STR(?ActiveVersion),\"-\",STR(?MDType2),\"-\",STR(?ROI))) AS ?PartonomyVS ) 
+           }
+         }
+        ",
+     "deletePattern": "
+     PREFIX obo: <http://purl.obolibrary.org/obo/>
+     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+     PREFIX dc: <http://purl.org/dc/terms/>
+     DELETE {
+        ?MD obo:OBI_0001938 ?PartonomyVS .
+     	?PartonomyVS obo:OBI_0000999 $value .
+     	?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+     	?MD obo:OBI_0001938 ?OriginalVS .
+     	?OriginalVS obo:OBI_0000999 $value . }
+       WHERE {
+           {
+           $subject obo:BFO_0000051 ?mysection.
+           ?mysection obo:BFO_0000051 ?MD .
+     	   ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessment> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?OriginalVS .
+           ?OriginalVS obo:OBI_0000999 $value .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+           ?Version a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+           ?Version obo:IAO_0000136 $subject .
+           
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject . 
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion = ?FirstVersion )
+  							FILTER NOT EXISTS { ?Version obo:BFO_0000051 ?OriginalVS }
+							}
+           UNION
+           {
+           $subject obo:BFO_0000051 ?mysection .
+           ?mysection obo:BFO_0000051 ?MD .
+     	   ?MD a <http://w3id.org/rdfbones/ext/phaleron-si/TaphonomicTraceAssessment> .
+           ?ROI a <http://w3id.org/rdfbones/ext/si-version/Humerus> .
+           ?MD obo:IAO_0000136 ?ROI ;
+           	obo:OBI_0001938 ?PartonomyVS .
+           ?PartonomyVS obo:OBI_0000999 $value .
+           ?ActiveVersion obo:BFO_0000051 ?PartonomyVS .
+           $subject <http://w3id.org/rdfbones/ext/si-version/HasActiveVersion> ?ActiveVersion .
+   								{ SELECT ?FirstVersion
+    									WHERE {
+								?FirstVersion a <http://w3id.org/rdfbones/ext/si-version/SkeletalInventoryVersion> .
+								?FirstVersion obo:IAO_0000136 $subject .
+								?FirstVersion dc:date ?Date .
+								}
+    							    ORDER BY ?Date
+    								LIMIT 1
+  								}
+  							FILTER ( ?ActiveVersion != ?FirstVersion )
+           }
+           }"
+}]'
+>
+<h2><strong>Humerus Taphonomy</strong></h2>
+ <semantic-form-recover-notification></semantic-form-recover-notification>
+                <div data-flex-layout="row md-column top-spread">
+<div class="grid-demo">
+		    <semantic-form-select-input for='humerustaph'></semantic-form-select-input>
+    <button name="submit" class="btn btn-primary"><strong>Save Taphonomy of Humerus</strong></button>
+  <button name="reset" class="btn btn-secondary">Reset</button>
+  [[>:RDFBONES_FormSuccessFeedbackTemplateSnippet ufb-id="show-after-HumerusTaph-update" ufbTemplate="HumerusTaph-Template" ufbname="HumerusTaph"]]
+</div>
+                </div>
+
+            </semantic-form>
+            [[>:RDFBONES_FormSuccessFeedbackEventSnippet event-source="HumerusTaph" event-target="show-after-HumerusTaph-update"]]
